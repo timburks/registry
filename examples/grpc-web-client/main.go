@@ -27,6 +27,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	statuspb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/status"
+	"github.com/golang/protobuf/ptypes/empty"
 )
 
 func check(err error) {
@@ -111,11 +112,9 @@ func main() {
 		check(fmt.Errorf("APG_REGISTRY_AUDIENCES is unset"))
 	}
 	// Make a sample API call with gRPC Web.
-	req := &rpc.ListProjectsRequest{
-		PageSize: 4,
-	}
-	res := &rpc.ListProjectsResponse{}
-	err := Do(server, "google.cloud.apigee.registry.v1.Registry", "ListProjects", req, res)
+	req := &empty.Empty{}
+	res := &rpc.Status{}
+	err := Do(server, "google.cloud.apigee.registry.v1.Registry", "GetStatus", req, res)
 	check(err)
 	log.Printf("response: %+v", res)
 }

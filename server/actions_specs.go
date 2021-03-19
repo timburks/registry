@@ -57,7 +57,7 @@ func (s *RegistryServer) CreateApiSpec(ctx context.Context, req *rpc.CreateApiSp
 }
 
 func (s *RegistryServer) createSpec(ctx context.Context, client storage.Client, spec *models.Spec, contents []byte) (*rpc.ApiSpec, error) {
-	tx, nil := client.BeginTransaction(ctx)
+	tx, _ := client.BeginTransaction(ctx)
 
 	q := tx.NewQuery(models.SpecEntityName)
 	q = q.Require("ProjectID", spec.ProjectID)

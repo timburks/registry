@@ -78,3 +78,11 @@ func (c *Client) Delete(ctx context.Context, k storage.Key) error {
 func (c *Client) Run(ctx context.Context, q storage.Query) storage.Iterator {
 	return &Iterator{iterator: c.client.Run(ctx, q.(*Query).query.Distinct())}
 }
+
+func (c *Client) BeginTransaction(ctx context.Context) (storage.Client, error) {
+	return c, nil
+}
+
+func (c *Client) CommitTransaction(ctx context.Context) error {
+	return nil
+}

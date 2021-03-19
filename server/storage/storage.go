@@ -41,6 +41,9 @@ type Client interface {
 	DeleteChildrenOfApi(ctx context.Context, api *models.Api) error
 	DeleteChildrenOfVersion(ctx context.Context, version *models.Version) error
 	DeleteChildrenOfSpec(ctx context.Context, spec *models.Spec) error
+
+	BeginTransaction(ctx context.Context) (Client, error)
+	CommitTransaction(ctx context.Context) error
 }
 
 type Key interface {

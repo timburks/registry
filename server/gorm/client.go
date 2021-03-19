@@ -301,3 +301,11 @@ func (c *Client) Run(ctx context.Context, q storage.Query) storage.Iterator {
 		return nil
 	}
 }
+
+func (c *Client) BeginTransaction(ctx context.Context) (storage.Client, error) {
+	return &Client{db: c.db.Begin()}, nil
+}
+
+func (c *Client) CommitTransaction(ctx context.Context) error {
+	return c.db.Commit().Error
+}

@@ -57,7 +57,9 @@ func (s *RegistryServer) CreateApiSpec(ctx context.Context, req *rpc.CreateApiSp
 }
 
 func (s *RegistryServer) createSpec(ctx context.Context, client storage.Client, spec *models.Spec, contents []byte) (*rpc.ApiSpec, error) {
-	q := client.NewQuery(models.SpecEntityName)
+	tx, nil := client.BeginTransaction(ctx)
+
+	q := tx.NewQuery(models.SpecEntityName)
 	q = q.Require("ProjectID", spec.ProjectID)
 	q = q.Require("ApiID", spec.ApiID)
 	q = q.Require("VersionID", spec.VersionID)
@@ -71,11 +73,11 @@ func (s *RegistryServer) createSpec(ctx context.Context, client storage.Client, 
 	spec.CreateTime = spec.RevisionUpdateTime
 	spec.RevisionCreateTime = spec.RevisionUpdateTime
 	spec.Currency = models.IsCurrent
-	if err := saveSpec(ctx, client, spec); err != nil {
+	if err := saveSpec(ctx, tx, spec); err != nil {
 		return nil, internalError(err)
 	}
 
-	if err := saveSpecContents(ctx, client, spec, contents); err != nil {
+	if err := saveSpecContents(ctx, tx, spec, contents); err != nil {
 		return nil, internalError(err)
 	}
 
@@ -84,7 +86,11 @@ func (s *RegistryServer) createSpec(ctx context.Context, client storage.Client, 
 		return nil, internalError(err)
 	}
 
+	if err := tx.CommitTransaction(ctx); err != nil {
+		return nil, internalError(err)
+	}
 	s.notify(rpc.Notification_CREATED, spec.ResourceNameWithRevision())
+
 	return response, nil
 }
 

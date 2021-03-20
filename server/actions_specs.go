@@ -57,7 +57,10 @@ func (s *RegistryServer) CreateApiSpec(ctx context.Context, req *rpc.CreateApiSp
 }
 
 func (s *RegistryServer) createSpec(ctx context.Context, client storage.Client, spec *models.Spec, contents []byte) (*rpc.ApiSpec, error) {
-	tx, _ := client.BeginTransaction(ctx)
+	tx, err := client.BeginTransaction(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	q := tx.NewQuery(models.SpecEntityName)
 	q = q.Require("ProjectID", spec.ProjectID)
@@ -67,6 +70,7 @@ func (s *RegistryServer) createSpec(ctx context.Context, client storage.Client, 
 	it := client.Run(ctx, q)
 
 	if _, err := it.Next(&models.Spec{}); err == nil {
+		tx.RollbackTransaction()
 		return nil, status.Errorf(codes.AlreadyExists, "spec %q already exists", spec.ResourceName())
 	}
 
@@ -74,20 +78,23 @@ func (s *RegistryServer) createSpec(ctx context.Context, client storage.Client, 
 	spec.RevisionCreateTime = spec.RevisionUpdateTime
 	spec.Currency = models.IsCurrent
 	if err := saveSpec(ctx, tx, spec); err != nil {
-		return nil, internalError(err)
+		tx.RollbackTransaction()
+		return nil, unavailableError(err)
 	}
 
 	if err := saveSpecContents(ctx, tx, spec, contents); err != nil {
-		return nil, internalError(err)
+		tx.RollbackTransaction()
+		return nil, unavailableError(err)
 	}
 
 	response, err := spec.Message(rpc.View_BASIC, nil, "")
 	if err != nil {
-		return nil, internalError(err)
+		tx.RollbackTransaction()
+		return nil, unavailableError(err)
 	}
 
 	if err := tx.CommitTransaction(ctx); err != nil {
-		return nil, internalError(err)
+		return nil, unavailableError(err)
 	}
 	s.notify(rpc.Notification_CREATED, spec.ResourceNameWithRevision())
 

@@ -50,6 +50,7 @@ type Client struct {
 
 var mutex sync.Mutex
 var disableMutex bool
+var dbName string
 
 func mylock() {
 	if !disableMutex {
@@ -82,6 +83,7 @@ func NewClient(ctx context.Context, gormDBName, gormConfig string) (*Client, err
 	//log.Printf("CREATING CLIENT (%d/%d %d)", clientCount, clientTotal, getGID())
 	switch gormDBName {
 	case "sqlite3":
+		dbName = "sqlite3"
 		db, err := gorm.Open(sqlite.Open(gormConfig), config())
 		if err != nil {
 			openErrorCount++
@@ -97,6 +99,7 @@ func NewClient(ctx context.Context, gormDBName, gormConfig string) (*Client, err
 		c := (&Client{db: db}).ensure()
 		return c, nil
 	case "postgres", "cloudsqlpostgres":
+		dbName = "postgres"
 		db, err := gorm.Open(postgres.New(postgres.Config{
 			DriverName: gormDBName,
 			DSN:        gormConfig,
@@ -303,9 +306,19 @@ func (c *Client) Run(ctx context.Context, q storage.Query) storage.Iterator {
 }
 
 func (c *Client) BeginTransaction(ctx context.Context) (storage.Client, error) {
-	return &Client{db: c.db.Begin()}, nil
+	tx := c.db.Begin()
+	if dbName == "postgres" {
+		if err := tx.Exec(`set transaction isolation level serializable`).Error; err != nil {
+			return nil, err
+		}
+	}
+	return &Client{db: tx}, nil
 }
 
 func (c *Client) CommitTransaction(ctx context.Context) error {
 	return c.db.Commit().Error
+}
+
+func (c *Client) RollbackTransaction() {
+	c.db.Rollback()
 }

@@ -86,3 +86,6 @@ func (c *Client) BeginTransaction(ctx context.Context) (storage.Client, error) {
 func (c *Client) CommitTransaction(ctx context.Context) error {
 	return nil
 }
+
+func (c *Client) RollbackTransaction() {
+}

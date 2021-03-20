@@ -44,6 +44,7 @@ type Client interface {
 
 	BeginTransaction(ctx context.Context) (Client, error)
 	CommitTransaction(ctx context.Context) error
+	RollbackTransaction()
 }
 
 type Key interface {
